@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interaktivní simulace elektrického pole</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    header {
+      background: #111827;
+      color: white;
+      padding: 18px 24px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 15px;
+      color: #d1d5db;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1250px;
+      margin: 0 auto;
+    }
+
+    .panel,
+    .canvas-box,
+    .info {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .panel h2,
+    .info h2 {
+      margin-top: 0;
+      font-size: 20px;
+    }
+
+    .control {
+      margin-bottom: 18px;
+    }
+
+    .control label {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: bold;
+      background: #2563eb;
+      color: white;
+    }
+
+    button.secondary {
+      background: #4b5563;
+    }
+
+    .canvas-box {
+      padding: 14px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      background: #050816;
+    }
+
+    .legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .red { background: #ef4444; }
+    .blue { background: #3b82f6; }
+
+    .info {
+      grid-column: 1 / -1;
+      padding: 18px 22px;
+      line-height: 1.55;
+    }
+
+    .formula {
+      background: #f9fafb;
+      border-left: 5px solid #2563eb;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: "Courier New", monospace;
+      overflow-x: auto;
+    }
+
+    @media (max-width: 850px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Interaktivní simulace elektrického pole</h1>
+    <p>Kladný a záporný náboj se pohybují a mění tvar elektrického pole.</p>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <h2>Nastavení simulace</h2>
+
+      <div class="control">
+        <label for="distance">
+          <span>Vzdálenost nábojů</span>
+          <span id="distanceValue">180</span>
+        </label>
+        <input id="distance" type="range" min="60" max="280" value="180" />
+      </div>
+
+      <div class="control">
+        <label for="charge">
+          <span>Velikost náboje</span>
+          <span id="chargeValue">1.0</span>
+        </label>
+        <input id="charge" type="range" min="0.2" max="3" step="0.1" value="1" />
+      </div>
+
+      <div class="control">
+        <label for="speed">
+          <span>Rychlost pohybu</span>
+          <span id="speedValue">1.0</span>
+        </label>
+        <input id="speed" type="range" min="0" max="3" step="0.1" value="1" />
+      </div>
+
+      <div class="control">
+        <label for="density">
+          <span>Hustota šipek</span>
+          <span id="densityValue">28</span>
+        </label>
+        <input id="density" type="range" min="18" max="45" value="28" />
+      </div>
+
+      <div class="control">
+        <label for="fieldStrength">
+          <span>Zvýraznění pole</span>
+          <span id="fieldStrengthValue">1.0</span>
+        </label>
+        <input id="fieldStrength" type="range" min="0.4" max="2.5" step="0.1" value="1" />
+      </div>
+
+      <div class="buttons">
+        <button id="pauseButton">Pozastavit</button>
+        <button id="resetButton" class="secondary">Reset</button>
+      </div>
+    </section>
+
+    <section class="canvas-box">
+      <canvas id="canvas" width="850" height="600"></canvas>
+      <div class="legend">
+        <span><span class="dot red"></span>kladný náboj</span>
+        <span><span class="dot blue"></span>záporný náboj</span>
+        <span>Šipky ukazují směr elektrického pole.</span>
+      </div>
+    </section>
+
+    <section class="info">
+      <h2>Vysvětlení pro žáky</h2>
+      <p>
+        Elektrické pole je oblast kolem elektrického náboje, ve které působí elektrická síla.
+        Červený bod představuje kladný náboj, modrý bod záporný náboj.
+        Šipky ukazují směr, kterým by se v daném místě pohyboval malý kladný zkušební náboj.
+      </p>
+      <p>
+        Pole vychází z kladného náboje a směřuje k zápornému náboji.
+        Když se náboje pohybují, mění se i výsledné elektrické pole.
+        Barevné pozadí ukazuje přibližnou velikost intenzity pole: světlejší místa znamenají silnější pole.
+      </p>
+      <div class="formula">
+        E = k · q / r²<br />
+        Výsledné pole od více nábojů vzniká skládáním jednotlivých polí.
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const controls = {
+      distance: document.getElementById("distance"),
+      charge: document.getElementById("charge"),
+      speed: document.getElementById("speed"),
+      density: document.getElementById("density"),
+      fieldStrength: document.getElementById("fieldStrength")
+    };
+
+    const labels = {
+      distance: document.getElementById("distanceValue"),
+      charge: document.getElementById("chargeValue"),
+      speed: document.getElementById("speedValue"),
+      density: document.getElementById("densityValue"),
+      fieldStrength: document.getElementById("fieldStrengthValue")
+    };
+
+    const pauseButton = document.getElementById("pauseButton");
+    const resetButton = document.getElementById("resetButton");
+
+    let time = 0;
+    let running = true;
+
+    function updateLabels() {
+      labels.distance.textContent = controls.distance.value;
+      labels.charge.textContent = Number(controls.charge.value).toFixed(1);
+      labels.speed.textContent = Number(controls.speed.value).toFixed(1);
+      labels.density.textContent = controls.density.value;
+      labels.fieldStrength.textContent = Number(controls.fieldStrength.value).toFixed(1);
+    }
+
+    Object.values(controls).forEach(control => {
+      control.addEventListener("input", updateLabels);
+    });
+
+    pauseButton.addEventListener("click", () => {
+      running = !running;
+      pauseButton.textContent = running ? "Pozastavit" : "Spustit";
+    });
+
+    resetButton.addEventListener("click", () => {
+      controls.distance.value = 180;
+      controls.charge.value = 1;
+      controls.speed.value = 1;
+      controls.density.value = 28;
+      controls.fieldStrength.value = 1;
+      time = 0;
+      updateLabels();
+    });
+
+    function getCharges() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const distance = Number(controls.distance.value);
+      const q = Number(controls.charge.value);
+
+      const x1 = cx + Math.cos(time) * distance;
+      const y1 = cy + Math.sin(time) * distance;
+
+      const x2 = cx - Math.cos(time) * distance;
+      const y2 = cy - Math.sin(time) * distance;
+
+      return [
+        { x: x1, y: y1, q: q, color: "#ef4444", label: "+" },
+        { x: x2, y: y2, q: -q, color: "#3b82f6", label: "−" }
+      ];
+    }
+
+    function fieldAt(x, y, charges) {
+      let ex = 0;
+      let ey = 0;
+
+      for (const charge of charges) {
+        const dx = x - charge.x;
+        const dy = y - charge.y;
+        const r2 = dx * dx + dy * dy + 500;
+        const r = Math.sqrt(r2);
+        const strength = charge.q / r2;
+
+        ex += strength * dx / r;
+        ey += strength * dy / r;
+      }
+
+      return { ex, ey, magnitude: Math.sqrt(ex * ex + ey * ey) };
+    }
+
+    function drawBackground(charges) {
+      const cell = 10;
+      const boost = Number(controls.fieldStrength.value);
+
+      for (let y = 0; y < canvas.height; y += cell) {
+        for (let x = 0; x < canvas.width; x += cell) {
+          const f = fieldAt(x, y, charges);
+          let value = Math.min(1, f.magnitude * 900000 * boost);
+
+          const r = Math.floor(10 + value * 245);
+          const g = Math.floor(20 + value * 120);
+          const b = Math.floor(45 + (1 - value) * 150);
+
+          ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+          ctx.fillRect(x, y, cell + 1, cell + 1);
+        }
+      }
+    }
+
+    function drawArrow(x, y, angle, length) {
+      const x2 = x + Math.cos(angle) * length;
+      const y2 = y + Math.sin(angle) * length;
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      const headLength = 6;
+      const a1 = angle + Math.PI * 0.78;
+      const a2 = angle - Math.PI * 0.78;
+
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 + Math.cos(a1) * headLength, y2 + Math.sin(a1) * headLength);
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 + Math.cos(a2) * headLength, y2 + Math.sin(a2) * headLength);
+      ctx.stroke();
+    }
+
+    function drawFieldArrows(charges) {
+      const step = Number(controls.density.value);
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.78)";
+      ctx.lineWidth = 1.2;
+
+      for (let y = step / 2; y < canvas.height; y += step) {
+        for (let x = step / 2; x < canvas.width; x += step) {
+          const f = fieldAt(x, y, charges);
+          const angle = Math.atan2(f.ey, f.ex);
+          const length = Math.min(18, 9 + f.magnitude * 260000);
+          drawArrow(x, y, angle, length);
+        }
+      }
+    }
+
+    function drawCharges(charges) {
+      for (const charge of charges) {
+        ctx.beginPath();
+        ctx.arc(charge.x, charge.y, 18, 0, Math.PI * 2);
+        ctx.fillStyle = charge.color;
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "white";
+        ctx.stroke();
+
+        ctx.fillStyle = "white";
+        ctx.font = "bold 26px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(charge.label, charge.x, charge.y + 1);
+      }
+    }
+
+    function drawCenter() {
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, 3, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.fill();
+    }
+
+    function animate() {
+      if (running) {
+        time += 0.012 * Number(controls.speed.value);
+      }
+
+      const charges = getCharges();
+
+      drawBackground(charges);
+      drawFieldArrows(charges);
+      drawCharges(charges);
+      drawCenter();
+
+      requestAnimationFrame(animate);
+    }
+
+    updateLabels();
+    animate();
+  </script>
+</body>
+</html>
